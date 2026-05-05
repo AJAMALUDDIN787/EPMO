@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EU Trip 2026 — Budapest & Split</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-mid: #111827;
+    --accent: #f59e0b;
+    --accent-hot: #ef4444;
+    --accent-cool: #06b6d4;
+    --accent-green: #10b981;
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-hover: rgba(255, 255, 255, 0.1);
+  }
+  
+  body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+  
+  /* World map background */
+  .map-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(ellipse at center, #1e293b 0%, #0a0e1a 70%);
+    overflow: hidden;
+  }
+  
+  .map-bg svg {
+    position: absolute;
+    width: 110%;
+    height: 110%;
+    top: -5%;
+    left: -5%;
+    opacity: 0.18;
+  }
+  
+  .map-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 55% 45%, transparent 0%, rgba(10, 14, 26, 0.7) 100%);
+  }
+  
+  /* Route highlight */
+  .route-highlight {
+    position: fixed;
+    z-index: 1;
+    pointer-events: none;
+    inset: 0;
+  }
+  
+  .city-pin {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  
+  .city-pin::after {
+    content: attr(data-city);
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+    letter-spacing: 0.5px;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+  }
+  
+  /* Container */
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  
+  /* Header */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    padding: 20px 28px;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+  }
+  
+  .header-left h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .header-left p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 0.3px;
+  }
+  
+  .header-right {
+    text-align: right;
+  }
+  
+  .live-time {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .live-date {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 20px;
+  }
+  
+  .card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card:hover {
+    background: var(--glass-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .card:hover::before { opacity: 1; }
+  
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .card-title .icon {
+    width: 16px;
+    height: 16px;
+    color: var(--accent);
+  }
+  
+  /* Spans */
+  .col-3 { grid-column: span 3; }
+  .col-4 { grid-column: span 4; }
+  .col-5 { grid-column: span 5; }
+  .col-6 { grid-column: span 6; }
+  .col-7 { grid-column: span 7; }
+  .col-8 { grid-column: span 8; }
+  .col-12 { grid-column: span 12; }
+  
+  @media (max-width: 1024px) {
+    .col-3, .col-4, .col-5, .col-6, .col-7, .col-8 { grid-column: span 12; }
+  }
+  
+  /* Countdown */
+  .countdown-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+  
+  .countdown-main {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  
+  .countdown-num {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .countdown-label {
+    font-size: 16px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  
+  .countdown-sub {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+  }
+  
+  .countdown-sub-item {
+    text-align: center;
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+  }
+  
+  .countdown-sub-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .countdown-sub-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  
+  .trip-progress {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--glass-border);
+  }
+  
+  .progress-bar {
+    height: 8px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #ef4444, #06b6d4);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  
+  .progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  
+  /* Trip route card */
+  .route-card {
+    position: relative;
+  }
+  
+  .route-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  
+  .route-stop {
+    flex: 1;
+    text-align: center;
+    padding: 16px 12px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  
+  .route-flag {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+  
+  .route-city {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  
+  .route-country {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  
+  .route-days {
+    font-size: 10px;
+    color: var(--accent);
+    margin-top: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .route-arrow {
+    color: var(--accent);
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  
+  /* Checklist */
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  
+  .checklist::-webkit-scrollbar { width: 4px; }
+  .checklist::-webkit-scrollbar-track { background: transparent; }
+  .checklist::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
+  
+  .check-section {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    padding: 8px 0 4px;
+    margin-top: 4px;
+  }
+  
+  .check-section:first-child { margin-top: 0; }
+  
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  
+  .check-item:hover {
+    background: rgba(0,0,0,0.35);
+    border-color: var(--glass-border);
+  }
+  
+  .check-item.done {
+    opacity: 0.5;
+  }
+  
+  .check-item.done .check-text {
+    text-decoration: line-through;
+  }
+  
+  .check-box {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--text-dim);
+    border-radius: 5px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  
+  .check-item.done .check-box {
+    background: var(--accent-green);
+    border-color: var(--accent-green);
+  }
+  
+  .check-item.done .check-box::after {
+    content: '✓';
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .check-text {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--text);
+  }
+  
+  .check-priority {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .priority-critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
+  
+  .priority-high {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fcd34d;
+  }
+  
+  /* Transport options */
+  .transport-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .transport-item {
+    padding: 14px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    transition: all 0.2s;
+  }
+  
+  .transport-item:hover {
+    border-color: var(--accent);
+    transform: translateX(2px);
+  }
+  
+  .transport-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  
+  .transport-mode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  
+  .transport-icon {
+    font-size: 18px;
+  }
+  
+  .transport-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent-green);
+  }
+  
+  .transport-details {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  
+  .transport-badge {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(6, 182, 212, 0.2);
+    color: var(--accent-cool);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+  }
+  
+  .transport-badge.best {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--accent-green);
+  }
+  
+  .transport-badge.fast {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--accent);
+  }
+  
+  /* Gas prices */
+  .gas-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .gas-country {
+    padding: 14px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 12px;
+  }
+  
+  .gas-flag {
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  
+  .gas-name {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  
+  .gas-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px;
+  }
+  
+  .gas-row:first-of-type { border-top: none; }
+  
+  .gas-type {
+    color: var(--text-dim);
+  }
+  
+  .gas-price {
+    font-weight: 700;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .gas-note {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--glass-border);
+    line-height: 1.5;
+  }
+  
+  /* Currency */
+  .currency-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  
+  .currency-item {
+    text-align: center;
+    padding: 14px 10px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 12px;
+  }
+  
+  .currency-code {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .currency-rate {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent-cool);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .currency-from {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  
+  /* Weather */
+  .weather-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  
+  .weather-city {
+    padding: 14px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 12px;
+    text-align: center;
+  }
+  
+  .weather-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  
+  .weather-icon {
+    font-size: 36px;
+    margin: 6px 0;
+  }
+  
+  .weather-temp {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .weather-range {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  
+  .weather-desc {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    text-transform: capitalize;
+  }
+  
+  /* Info pills */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .info-pill {
+    padding: 12px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+  }
+  
+  .info-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  
+  .info-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    background: rgba(0,0,0,0.3);
+    padding: 4px;
+    border-radius: 10px;
+  }
+  
+  .tab {
+    flex: 1;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 7px;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg-deep);
+  }
+  
+  .tab:not(.active):hover {
+    color: var(--text);
+  }
+  
+  /* Reset button */
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    cursor: pointer;
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  
+  .reset-btn:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  
+  .checklist-stats {
+    font-size: 10px;
+    color: var(--accent-green);
+    margin-left: 8px;
+    font-weight: 700;
+  }
+  
+  .live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    margin-right: 6px;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  
+  /* Trip phase indicator */
+  .phase-active {
+    color: var(--accent-green);
+    font-weight: 700;
+  }
+  
+  /* Tip box */
+  .tip-box {
+    margin-top: 14px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(16, 185, 129, 0.05));
+    border-left: 3px solid var(--accent-cool);
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-dim);
+  }
+  
+  .tip-box strong {
+    color: var(--accent-cool);
+  }
+</style>
+</head>
+<body>
+
+<!-- World Map Background -->
+<div class="map-bg">
+  <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+    <!-- Stylized world map paths -->
+    <g fill="#475569" stroke="#64748b" stroke-width="0.5">
+      <!-- North America -->
+      <path d="M 50 120 Q 80 80 150 90 L 220 100 Q 260 110 280 140 L 290 180 Q 280 220 240 240 L 180 245 Q 130 240 90 220 L 60 180 Z"/>
+      <path d="M 130 250 L 180 260 Q 200 280 195 310 L 175 340 L 150 335 Q 130 310 125 285 Z"/>
+      <!-- South America -->
+      <path d="M 240 280 Q 270 290 285 320 L 290 380 Q 280 430 260 460 L 235 470 Q 215 440 220 400 L 230 340 Z"/>
+      <!-- Europe -->
+      <path d="M 460 130 Q 490 120 520 130 L 555 145 Q 575 165 565 185 L 540 200 Q 510 195 485 185 L 465 165 Z"/>
+      <!-- Africa -->
+      <path d="M 480 210 Q 520 215 550 230 L 575 270 Q 580 320 565 360 L 540 400 Q 510 410 490 395 L 470 360 Q 460 310 470 260 Z"/>
+      <!-- Asia -->
+      <path d="M 580 130 Q 650 115 720 125 L 800 140 Q 850 160 870 200 L 860 240 Q 820 260 770 255 L 700 245 Q 640 230 600 210 L 575 180 Z"/>
+      <path d="M 720 260 Q 780 270 820 285 L 840 310 L 825 330 L 780 325 L 740 315 Q 715 295 715 275 Z"/>
+      <!-- Australia -->
+      <path d="M 800 360 Q 840 355 875 365 L 895 385 Q 890 410 870 415 L 830 412 Q 805 400 800 380 Z"/>
+      <!-- UK/Ireland -->
+      <path d="M 445 145 Q 455 140 460 155 L 458 170 L 448 168 Q 440 158 442 150 Z"/>
+      <!-- Japan -->
+      <path d="M 855 195 Q 865 200 870 215 L 868 230 L 858 228 Q 850 215 852 200 Z"/>
+      <!-- Mediterranean detail -->
+      <path d="M 480 195 L 520 200 L 540 205 L 525 215 L 495 213 Z" opacity="0.8"/>
+    </g>
+    <!-- Grid lines -->
+    <g stroke="#334155" stroke-width="0.3" fill="none" opacity="0.4">
+      <path d="M 0 100 Q 500 95 1000 100"/>
+      <path d="M 0 200 Q 500 195 1000 200"/>
+      <path d="M 0 300 Q 500 295 1000 300"/>
+      <path d="M 0 400 Q 500 395 1000 400"/>
+      <line x1="200" y1="0" x2="200" y2="500"/>
+      <line x1="400" y1="0" x2="400" y2="500"/>
+      <line x1="600" y1="0" x2="600" y2="500"/>
+      <line x1="800" y1="0" x2="800" y2="500"/>
+    </g>
+  </svg>
+</div>
+
+<!-- Container -->
+<div class="container">
+  
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <h1>EU Trip 2026 ✈️</h1>
+      <p>Jeddah → Budapest → Split · May 26 – June 5</p>
+    </div>
+    <div class="header-right">
+      <div class="live-time"><span class="live-dot"></span><span id="liveTime">--:--:--</span></div>
+      <div class="live-date" id="liveDate">Loading...</div>
+    </div>
+  </header>
+  
+  <!-- Main Grid -->
+  <div class="grid">
+    
+    <!-- Countdown Card -->
+    <div class="card countdown-card col-4">
+      <div class="card-title">⏱ Countdown to Departure</div>
+      <div class="countdown-main">
+        <div class="countdown-num" id="daysLeft">--</div>
+        <div class="countdown-label" id="countdownLabel">days to go</div>
+      </div>
+      <div class="countdown-sub">
+        <div class="countdown-sub-item">
+          <div class="countdown-sub-num" id="hoursLeft">--</div>
+          <div class="countdown-sub-label">Hours</div>
+        </div>
+        <div class="countdown-sub-item">
+          <div class="countdown-sub-num" id="minsLeft">--</div>
+          <div class="countdown-sub-label">Minutes</div>
+        </div>
+        <div class="countdown-sub-item">
+          <div class="countdown-sub-num" id="secsLeft">--</div>
+          <div class="countdown-sub-label">Seconds</div>
+        </div>
+      </div>
+      <div class="trip-progress">
+        <div class="progress-text">
+          <span id="progressLabel">Pre-trip</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Trip Route -->
+    <div class="card route-card col-8">
+      <div class="card-title">🗺 Your Journey · 11 Days</div>
+      <div class="route-display">
+        <div class="route-stop">
+          <div class="route-flag">🇸🇦</div>
+          <div class="route-city">Jeddah</div>
+          <div class="route-country">Saudi Arabia</div>
+          <div class="route-days">Departure</div>
+        </div>
+        <div class="route-arrow">✈️</div>
+        <div class="route-stop">
+          <div class="route-flag">🇭🇺</div>
+          <div class="route-city">Budapest</div>
+          <div class="route-country">Hungary</div>
+          <div class="route-days">May 26–28 · 3 days</div>
+        </div>
+        <div class="route-arrow">→</div>
+        <div class="route-stop">
+          <div class="route-flag">🇭🇷</div>
+          <div class="route-city">Split</div>
+          <div class="route-country">Croatia (Adriatic Coast)</div>
+          <div class="route-days">May 28 – Jun 4 · 7 days</div>
+        </div>
+        <div class="route-arrow">✈️</div>
+        <div class="route-stop">
+          <div class="route-flag">🇸🇦</div>
+          <div class="route-city">Jeddah</div>
+          <div class="route-country">Return June 5</div>
+          <div class="route-days">Home</div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <strong>💡 Why Split?</strong> Most logical Croatian beach base — direct bus & flight from Budapest, gateway to Hvar/Brač islands, walkable old town (Diocletian's Palace), great beaches (Bačvice, Kašjuni), and ferry hub for day trips. June is ideal: warm sea (~22°C), fewer crowds than July/August.
+      </div>
+    </div>
+    
+    <!-- Checklist -->
+    <div class="card col-5">
+      <div class="card-title">
+        ✅ Pre-Trip Checklist
+        <span class="checklist-stats" id="checklistStats">0/0</span>
+        <button class="reset-btn" onclick="resetChecklist()">Reset</button>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchChecklist(this, 'documents')">📄 Documents</button>
+        <button class="tab" onclick="switchChecklist(this, 'preTrip')">📋 Pre-Trip</button>
+        <button class="tab" onclick="switchChecklist(this, 'packing')">🎒 Packing</button>
+      </div>
+      <div class="checklist" id="checklist"></div>
+    </div>
+    
+    <!-- Transport options -->
+    <div class="card col-7">
+      <div class="card-title">🚐 Budapest → Split Transport Options</div>
+      <div class="transport-list">
+        
+        <div class="transport-item">
+          <div class="transport-header">
+            <div class="transport-mode">
+              <span class="transport-icon">🚌</span>
+              FlixBus (Direct)
+              <span class="transport-badge best">Best Value</span>
+            </div>
+            <div class="transport-price">€31–€95</div>
+          </div>
+          <div class="transport-details">
+            ~10h 35m · 2× daily direct (Budapest Népliget → Split Autobusni Kolodvor) · WiFi & toilet onboard · Book early on flixbus.com or omio.com for cheapest fares
+          </div>
+        </div>
+        
+        <div class="transport-item">
+          <div class="transport-header">
+            <div class="transport-mode">
+              <span class="transport-icon">✈️</span>
+              Flight (1 stop)
+              <span class="transport-badge fast">Fastest</span>
+            </div>
+            <div class="transport-price">€85–€320</div>
+          </div>
+          <div class="transport-details">
+            ~3h 35m – 6h 20m · No direct flights — connect via Vienna, Munich, or Zagreb · Croatia Airlines, Lufthansa, Austrian, Wizz Air · Best if luggage is light
+          </div>
+        </div>
+        
+        <div class="transport-item">
+          <div class="transport-header">
+            <div class="transport-mode">
+              <span class="transport-icon">🚆</span>
+              EuroNight Train
+              <span class="transport-badge">Scenic</span>
+            </div>
+            <div class="transport-price">€83–€140</div>
+          </div>
+          <div class="transport-details">
+            ~14–17h via Zagreb (overnight option Tue/Fri/Sun) · Sleeper cabins available · Book on mavcsoport.hu or trainline.com · Save a hotel night
+          </div>
+        </div>
+        
+        <div class="transport-item">
+          <div class="transport-header">
+            <div class="transport-mode">
+              <span class="transport-icon">🚗</span>
+              Rental Car
+              <span class="transport-badge">Flexible</span>
+            </div>
+            <div class="transport-price">€40–80/day + fuel</div>
+          </div>
+          <div class="transport-details">
+            ~9h drive (640 km) · Toll roads in both countries · Vignette needed for Hungary (HU-GO) · Cross-border drop-off fees apply · Great for stopping at Plitvice Lakes en route
+          </div>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- Gas Prices -->
+    <div class="card col-4">
+      <div class="card-title">⛽ Live Fuel Prices</div>
+      <div class="gas-grid">
+        <div class="gas-country">
+          <div class="gas-flag">🇭🇺</div>
+          <div class="gas-name">Hungary</div>
+          <div class="gas-row">
+            <span class="gas-type">Petrol 95</span>
+            <span class="gas-price">€1.65/L</span>
+          </div>
+          <div class="gas-row">
+            <span class="gas-type">Diesel</span>
+            <span class="gas-price">€1.71/L</span>
+          </div>
+          <div class="gas-row">
+            <span class="gas-type">LPG</span>
+            <span class="gas-price">€0.95/L</span>
+          </div>
+        </div>
+        <div class="gas-country">
+          <div class="gas-flag">🇭🇷</div>
+          <div class="gas-name">Croatia</div>
+          <div class="gas-row">
+            <span class="gas-type">Petrol 95</span>
+            <span class="gas-price">€1.66/L</span>
+          </div>
+          <div class="gas-row">
+            <span class="gas-type">Diesel</span>
+            <span class="gas-price">€1.85/L</span>
+          </div>
+          <div class="gas-row">
+            <span class="gas-type">LPG</span>
+            <span class="gas-price">€1.26/L</span>
+          </div>
+        </div>
+      </div>
+      <div class="gas-note">
+        📊 Prices as of late April 2026 (EU Oil Bulletin). Croatia regulates fuel every 2 weeks — check <strong>putovnica.net</strong>. Hungary subsidies for HU plates only; tourists pay full rate. ~3× higher than Saudi.
+      </div>
+    </div>
+    
+    <!-- Weather -->
+    <div class="card col-4">
+      <div class="card-title">🌤 Weather Forecast (Late May – Early June)</div>
+      <div class="weather-grid">
+        <div class="weather-city">
+          <div class="weather-name">🇭🇺 Budapest</div>
+          <div class="weather-icon">⛅</div>
+          <div class="weather-temp">22°C</div>
+          <div class="weather-range">14° / 24°C avg</div>
+          <div class="weather-desc">Partly cloudy · light rain possible</div>
+        </div>
+        <div class="weather-city">
+          <div class="weather-name">🇭🇷 Split</div>
+          <div class="weather-icon">☀️</div>
+          <div class="weather-temp">25°C</div>
+          <div class="weather-range">17° / 27°C avg</div>
+          <div class="weather-desc">Sunny · sea ~22°C swimmable</div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <strong>👕 Pack:</strong> Light layers + light jacket for Budapest evenings, swimwear & sunscreen for Split, comfortable walking shoes for both. Beach shoes recommended (Croatian beaches are pebbly).
+      </div>
+    </div>
+    
+    <!-- Currency -->
+    <div class="card col-4">
+      <div class="card-title">💱 Currency & Money</div>
+      <div class="currency-grid">
+        <div class="currency-item">
+          <div class="currency-code">🇭🇺 HUF</div>
+          <div class="currency-rate" id="huf">~95</div>
+          <div class="currency-from">per 1 SAR</div>
+        </div>
+        <div class="currency-item">
+          <div class="currency-code">🇭🇷 EUR</div>
+          <div class="currency-rate" id="eur">~0.24</div>
+          <div class="currency-from">per 1 SAR</div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <strong>💳 Money tips:</strong> Croatia uses Euro (since Jan 2023). Hungary still uses Forint — avoid dynamic conversion at ATMs (always pay in HUF, not SAR/EUR). Cards widely accepted; carry some cash for taxis & small cafés. Notify your bank before travel.
+      </div>
+    </div>
+    
+    <!-- Essential Info -->
+    <div class="card col-6">
+      <div class="card-title">ℹ️ Essential Info</div>
+      <div class="info-grid">
+        <div class="info-pill">
+          <div class="info-label">🛂 Visa (Saudi citizens)</div>
+          <div class="info-value">Schengen Type C — €80 · 5-yr multi-entry</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🚨 Emergency (both)</div>
+          <div class="info-value">112 (universal EU)</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🔌 Plug Type</div>
+          <div class="info-value">Type C/F · 230V · 50Hz</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🕐 Time Zone</div>
+          <div class="info-value">CEST (UTC+2) · -1h vs Jeddah</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🗣 Hungarian Hello</div>
+          <div class="info-value">Szia / Jó napot · Köszönöm (thanks)</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🗣 Croatian Hello</div>
+          <div class="info-value">Bok / Dobar dan · Hvala (thanks)</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">💰 Tipping Hungary</div>
+          <div class="info-value">10–15% (check if included)</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">💰 Tipping Croatia</div>
+          <div class="info-value">10% restaurants · round up taxis</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Local Transport / Things to do -->
+    <div class="card col-6">
+      <div class="card-title">🎯 Top Things to Do</div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchActivities(this, 'budapest')">🇭🇺 Budapest</button>
+        <button class="tab" onclick="switchActivities(this, 'split')">🇭🇷 Split & Coast</button>
+      </div>
+      <div id="activities-list" class="checklist" style="max-height: 280px;"></div>
+    </div>
+    
+    <!-- Daily Budget Estimate -->
+    <div class="card col-12">
+      <div class="card-title">💰 Daily Budget Estimate (per person, EUR)</div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+        <div class="info-pill">
+          <div class="info-label">🛏 Mid-range Hotel</div>
+          <div class="info-value">€60–120 / night</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">3-star, central location</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🍽 Food (3 meals)</div>
+          <div class="info-value">€30–55 / day</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Café breakfast + restaurant dinner</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🚇 Local Transport</div>
+          <div class="info-value">€5–15 / day</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Metro, tram, occasional taxi/Bolt</div>
+        </div>
+        <div class="info-pill">
+          <div class="info-label">🎭 Activities</div>
+          <div class="info-value">€20–40 / day</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px;">Museums, baths, ferry trips</div>
+        </div>
+      </div>
+      <div class="tip-box">
+        <strong>📊 Total estimate:</strong> ~€115–230/person/day · For 11 days, budget €1,300–2,500/person excluding flights & Budapest→Split transport. Croatia coast is ~15–25% pricier than Budapest in food/lodging.
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// ===== Trip configuration =====
+const TRIP_START = new Date('2026-05-26T08:00:00+03:00'); // Jeddah departure
+const TRIP_END = new Date('2026-06-05T23:59:59+03:00');
+const BUDAPEST_END = new Date('2026-05-28T12:00:00+02:00');
+const SPLIT_START = BUDAPEST_END;
+
+// ===== Live time & countdown =====
+function updateLiveTime() {
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-GB', { hour12: false });
+  const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('liveTime').textContent = time;
+  document.getElementById('liveDate').textContent = date;
+}
+
+function updateCountdown() {
+  const now = new Date();
+  const target = now < TRIP_START ? TRIP_START : (now < TRIP_END ? TRIP_END : null);
+  
+  if (!target) {
+    document.getElementById('daysLeft').textContent = '✓';
+    document.getElementById('countdownLabel').textContent = 'Trip complete!';
+    document.getElementById('hoursLeft').textContent = '--';
+    document.getElementById('minsLeft').textContent = '--';
+    document.getElementById('secsLeft').textContent = '--';
+    return;
+  }
+  
+  const diff = target - now;
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const mins = Math.floor((diff / (1000 * 60)) % 60);
+  const secs = Math.floor((diff / 1000) % 60);
+  
+  document.getElementById('daysLeft').textContent = days;
+  document.getElementById('hoursLeft').textContent = String(hours).padStart(2, '0');
+  document.getElementById('minsLeft').textContent = String(mins).padStart(2, '0');
+  document.getElementById('secsLeft').textContent = String(secs).padStart(2, '0');
+  
+  // Trip progress
+  if (now < TRIP_START) {
+    document.getElementById('countdownLabel').textContent = 'days until Budapest';
+    const totalPrep = TRIP_START - new Date('2026-04-26');
+    const elapsed = now - new Date('2026-04-26');
+    const pct = Math.max(0, Math.min(100, (elapsed / totalPrep) * 100));
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = 'Pre-trip prep';
+    document.getElementById('progressPct').textContent = Math.round(pct) + '%';
+  } else if (now < TRIP_END) {
+    document.getElementById('countdownLabel').textContent = 'days until home';
+    const totalTrip = TRIP_END - TRIP_START;
+    const elapsed = now - TRIP_START;
+    const pct = (elapsed / totalTrip) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    
+    if (now < BUDAPEST_END) {
+      document.getElementById('progressLabel').innerHTML = '<span class="phase-active">📍 In Budapest</span>';
+    } else {
+      document.getElementById('progressLabel').innerHTML = '<span class="phase-active">📍 In Split</span>';
+    }
+    document.getElementById('progressPct').textContent = Math.round(pct) + '%';
+  }
+}
+
+// ===== Checklists =====
+const checklists = {
+  documents: {
+    title: 'Documents',
+    sections: [
+      {
+        name: 'Critical — Before booking',
+        items: [
+          { text: 'Schengen Type C visa application (apply 4–6 weeks ahead, €80, multi-entry 5yr for Saudi citizens)', priority: 'critical' },
+          { text: 'Passport valid 6+ months past return date with 2+ blank pages', priority: 'critical' },
+          { text: 'Travel insurance with min €30,000 coverage (Schengen requirement)', priority: 'critical' },
+        ]
+      },
+      {
+        name: 'Bookings & confirmations',
+        items: [
+          { text: 'Round-trip flights Jeddah ↔ Budapest (& Split → Jeddah return)', priority: 'high' },
+          { text: 'Hotel reservations Budapest (3 nights) printed/screenshot', priority: 'high' },
+          { text: 'Hotel reservations Split (7 nights) printed/screenshot', priority: 'high' },
+          { text: 'Budapest → Split transport (FlixBus / flight / train) booked', priority: 'high' },
+          { text: 'Print proof of accommodations & return ticket (border check)', priority: 'high' },
+        ]
+      },
+      {
+        name: 'Backups & digital',
+        items: [
+          { text: 'Photocopy of passport in separate bag', priority: 'high' },
+          { text: 'Digital scans uploaded to email/cloud', priority: 'high' },
+          { text: 'International Driving Permit (if renting car)', priority: 'normal' },
+          { text: 'Travel insurance card / policy number saved', priority: 'high' },
+          { text: 'Credit/debit card for travel notification to bank', priority: 'high' },
+          { text: 'Emergency contacts list (embassy, family, insurance)', priority: 'normal' },
+        ]
+      }
+    ]
+  },
+  preTrip: {
+    title: 'Pre-Trip',
+    sections: [
+      {
+        name: '4 weeks before',
+        items: [
+          { text: 'Submit Schengen visa application (allow 15+ days processing)', priority: 'critical' },
+          { text: 'Book hotels (rates rise closer to date)', priority: 'high' },
+          { text: 'Reserve Budapest → Split transport early (FlixBus cheapest €31 if booked early)', priority: 'high' },
+          { text: 'Check vaccinations (no special requirements but tetanus/MMR up to date)', priority: 'normal' },
+        ]
+      },
+      {
+        name: '1 week before',
+        items: [
+          { text: 'Notify bank of international travel dates', priority: 'high' },
+          { text: 'Download offline maps (Google Maps, Maps.me) for Budapest & Split', priority: 'high' },
+          { text: 'Get some Euros (~€100–200) for arrival cash', priority: 'normal' },
+          { text: 'Check flight schedule & seat assignments', priority: 'normal' },
+          { text: 'Arrange airport transfer Jeddah → KAIA', priority: 'normal' },
+          { text: 'Set up eSIM or activate roaming (Airalo, Holafly for EU)', priority: 'high' },
+          { text: 'Download offline translation app (Google Translate HU + HR packs)', priority: 'normal' },
+        ]
+      },
+      {
+        name: '24 hours before',
+        items: [
+          { text: 'Online check-in for flight', priority: 'high' },
+          { text: 'Charge all devices + power bank', priority: 'high' },
+          { text: 'Confirm hotel address & arrival time', priority: 'normal' },
+          { text: 'Re-check weather for any forecast updates', priority: 'normal' },
+          { text: 'Pack medications in carry-on with prescriptions', priority: 'critical' },
+        ]
+      }
+    ]
+  },
+  packing: {
+    title: 'Packing',
+    sections: [
+      {
+        name: 'Documents bag (carry-on)',
+        items: [
+          { text: 'Passport + visa pages', priority: 'critical' },
+          { text: 'Printed bookings (hotels, flights, bus)', priority: 'high' },
+          { text: 'Travel insurance card', priority: 'high' },
+          { text: 'Credit/debit cards (×2 different networks)', priority: 'high' },
+          { text: 'Cash: SAR for departure, EUR ~€200 for arrival', priority: 'high' },
+        ]
+      },
+      {
+        name: 'Clothing (May–June, 11 days)',
+        items: [
+          { text: 'Light jacket / windbreaker (Budapest evenings)', priority: 'high' },
+          { text: 'T-shirts × 6–7', priority: 'normal' },
+          { text: 'Long-sleeve shirts × 2', priority: 'normal' },
+          { text: 'Pants/jeans × 2 + shorts × 2', priority: 'normal' },
+          { text: 'Swimwear × 2 (Croatia coast)', priority: 'high' },
+          { text: 'Comfortable walking shoes', priority: 'critical' },
+          { text: 'Beach shoes / water shoes (pebble beaches)', priority: 'high' },
+          { text: 'Sandals/flip-flops', priority: 'normal' },
+          { text: 'Underwear & socks (×7+)', priority: 'normal' },
+          { text: 'Pajamas / sleepwear', priority: 'normal' },
+        ]
+      },
+      {
+        name: 'Tech & gadgets',
+        items: [
+          { text: 'EU Type C/F adapter (×2)', priority: 'critical' },
+          { text: 'Phone charger + power bank (10000mAh+)', priority: 'high' },
+          { text: 'Headphones', priority: 'normal' },
+          { text: 'Camera + spare battery + memory card', priority: 'normal' },
+          { text: 'Universal travel adapter with USB ports', priority: 'high' },
+        ]
+      },
+      {
+        name: 'Toiletries & health',
+        items: [
+          { text: 'Sunscreen SPF 50+ (essential for Split)', priority: 'critical' },
+          { text: 'After-sun lotion / aloe vera', priority: 'normal' },
+          { text: 'Personal medications + prescriptions', priority: 'critical' },
+          { text: 'First aid basics (band-aids, painkillers, antihistamine)', priority: 'high' },
+          { text: 'Toothbrush, toothpaste, deodorant, shampoo (travel-size)', priority: 'normal' },
+          { text: 'Insect repellent (mosquitoes near water)', priority: 'high' },
+          { text: 'Hand sanitizer & wet wipes', priority: 'normal' },
+        ]
+      },
+      {
+        name: 'Other essentials',
+        items: [
+          { text: 'Sunglasses & hat', priority: 'high' },
+          { text: 'Reusable water bottle', priority: 'normal' },
+          { text: 'Day backpack / small bag', priority: 'high' },
+          { text: 'Quick-dry towel (beach)', priority: 'normal' },
+          { text: 'Snorkel mask (optional, beautiful Adriatic)', priority: 'normal' },
+          { text: 'Compact umbrella', priority: 'normal' },
+          { text: 'Padlock for hostel/luggage', priority: 'normal' },
+        ]
+      }
+    ]
+  }
+};
+
+const activities = {
+  budapest: [
+    { name: '🏛 Buda Castle & Castle Hill', desc: 'UNESCO site, panoramic Danube views, free to wander grounds' },
+    { name: '🛁 Széchenyi Thermal Baths', desc: 'Iconic yellow neo-baroque baths, ~€25 entry, go evening for atmosphere' },
+    { name: '🌉 Chain Bridge & Parliament', desc: 'Walk at sunset, free; Parliament tour ~€10 (book ahead)' },
+    { name: '🍷 Ruin Bars (Szimpla Kert)', desc: 'Eclectic nightlife in Jewish Quarter, free entry' },
+    { name: '⛪ St. Stephen\'s Basilica', desc: 'Climb dome for 360° city views (~€7)' },
+    { name: '🚢 Danube Evening Cruise', desc: '~€20–35, see illuminated Parliament & Buda Castle' },
+    { name: '🥘 Central Market Hall', desc: 'Try goulash, lángos, paprika; ground floor food stalls' },
+    { name: '🚇 Metro Line 1', desc: '2nd-oldest metro in world (1896), UNESCO listed' },
+  ],
+  split: [
+    { name: '🏛 Diocletian\'s Palace', desc: 'UNESCO Roman palace = old town living museum, free to walk' },
+    { name: '🏖 Bačvice Beach', desc: 'Sandy beach (rare in Croatia), 10-min walk from center' },
+    { name: '⛰ Marjan Hill', desc: 'Free hike with viewpoints over Split & islands, sunset spot' },
+    { name: '⛵ Hvar Island Day Trip', desc: 'Catamaran ~€25 each way, 1h, party island + lavender fields' },
+    { name: '🏝 Brač / Zlatni Rat Beach', desc: 'Croatia\'s most famous beach, ferry from Split (~1h)' },
+    { name: '💧 Krka National Park', desc: 'Waterfalls 1h drive, ~€20 entry, swimming was banned 2021 but views amazing' },
+    { name: '🏰 Klis Fortress', desc: 'Game of Thrones filming location, ~30min drive from Split' },
+    { name: '🍷 Konoba dinner (local tavern)', desc: 'Try peka (slow-cooked meat under bell), pašticada, fresh seafood' },
+    { name: '🌅 Riva Promenade', desc: 'Waterfront walk, cafes, evening passeggiata vibe' },
+    { name: '🏛 Trogir Day Trip', desc: 'UNESCO medieval town, 30min by bus, walkable in half day' },
+  ]
+};
+
+let currentChecklistKey = 'documents';
+let currentActivityKey = 'budapest';
+
+function loadChecklistState() {
+  // Use in-memory state only (no localStorage in artifacts)
+  return window._checklistState || {};
+}
+
+function saveChecklistState(state) {
+  window._checklistState = state;
+}
+
+function renderChecklist() {
+  const list = checklists[currentChecklistKey];
+  const container = document.getElementById('checklist');
+  const state = loadChecklistState();
+  let html = '';
+  let total = 0, done = 0;
+  
+  list.sections.forEach((section, sIdx) => {
+    html += `<div class="check-section">${section.name}</div>`;
+    section.items.forEach((item, iIdx) => {
+      const id = `${currentChecklistKey}-${sIdx}-${iIdx}`;
+      const checked = state[id] === true;
+      total++;
+      if (checked) done++;
+      const priorityBadge = item.priority === 'critical' 
+        ? '<span class="check-priority priority-critical">Critical</span>' 
+        : item.priority === 'high' 
+          ? '<span class="check-priority priority-high">High</span>' 
+          : '';
+      html += `
+        <div class="check-item ${checked ? 'done' : ''}" onclick="toggleCheck('${id}', this)">
+          <div class="check-box"></div>
+          <div class="check-text">${item.text}${priorityBadge}</div>
+        </div>
+      `;
+    });
+  });
+  
+  container.innerHTML = html;
+  document.getElementById('checklistStats').textContent = `${done}/${total}`;
+}
+
+function toggleCheck(id, el) {
+  const state = loadChecklistState();
+  state[id] = !state[id];
+  saveChecklistState(state);
+  el.classList.toggle('done');
+  
+  // Update stats
+  const items = document.querySelectorAll('.check-item');
+  const total = items.length;
+  const done = document.querySelectorAll('.check-item.done').length;
+  document.getElementById('checklistStats').textContent = `${done}/${total}`;
+}
+
+function switchChecklist(btn, key) {
+  document.querySelectorAll('.tabs')[0].querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentChecklistKey = key;
+  renderChecklist();
+}
+
+function resetChecklist() {
+  if (confirm('Reset all checked items in this list?')) {
+    const state = loadChecklistState();
+    const list = checklists[currentChecklistKey];
+    list.sections.forEach((section, sIdx) => {
+      section.items.forEach((item, iIdx) => {
+        const id = `${currentChecklistKey}-${sIdx}-${iIdx}`;
+        delete state[id];
+      });
+    });
+    saveChecklistState(state);
+    renderChecklist();
+  }
+}
+
+function renderActivities() {
+  const list = activities[currentActivityKey];
+  const container = document.getElementById('activities-list');
+  let html = '';
+  list.forEach(item => {
+    html += `
+      <div class="check-item" style="cursor:default;">
+        <div style="font-size:18px;flex-shrink:0;">${item.name.split(' ')[0]}</div>
+        <div class="check-text">
+          <div style="font-weight:600;">${item.name.substring(item.name.indexOf(' ') + 1)}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${item.desc}</div>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function switchActivities(btn, key) {
+  const tabsWrap = btn.parentElement;
+  tabsWrap.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  currentActivityKey = key;
+  renderActivities();
+}
+
+// ===== Initialize =====
+updateLiveTime();
+updateCountdown();
+renderChecklist();
+renderActivities();
+
+setInterval(updateLiveTime, 1000);
+setInterval(updateCountdown, 1000);
+</script>
+
+</body>
+</html>
